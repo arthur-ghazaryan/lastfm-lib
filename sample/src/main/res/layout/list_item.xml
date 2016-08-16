@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="?android:attr/actionBarSize">
+
+    <ImageView
+        android:id="@+id/album_image"
+        android:layout_width="?android:attr/actionBarSize"
+        android:layout_height="match_parent"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:src="@color/colorAccent"/>
+
+    <TextView
+        android:id="@+id/artist"
+        android:layout_marginTop="@dimen/margin8dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/loved_tracks"
+        android:textColor="@android:color/black"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:layout_toRightOf="@id/album_image"
+        android:layout_toEndOf="@id/album_image"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/track"
+        android:layout_below="@id/artist"
+        android:layout_toRightOf="@id/album_image"
+        android:layout_toEndOf="@id/album_image"
+        android:text="@string/loved_tracks"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/margin4dp" />
+
+
+
+</RelativeLayout>

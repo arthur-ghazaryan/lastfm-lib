@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">TestApplication</string>
+    <string name="username">User name</string>
+    <string name="password">Password</string>
+    <string name="login">Let me in!</string>
+    <string name="scrobble_button">Scrobble</string>
+    <string name="scrobbletrack">Scrobble track name</string>
+
+    <string name="loved_tracks">Loved tracks</string>
+    <string name="logout">Logout</string>
+
+
+    <string name="api_key">7b2b7e07e0e5125ce9d17f469bda391c</string>
+    <string name="secret">a42d512599ace9ec76de8ae8bc166b1d</string>
+</resources>

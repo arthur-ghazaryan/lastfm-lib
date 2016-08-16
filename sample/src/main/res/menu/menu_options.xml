@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/loved_tracks"
+        android:orderInCategory="100"
+        app:showAsAction="never"
+        android:title="@string/loved_tracks" />
+
+    <item
+        android:id="@+id/scrobble_tracks"
+        android:orderInCategory="200"
+        app:showAsAction="never"
+        android:title="@string/scrobble_button" />
+
+
+
+</menu>

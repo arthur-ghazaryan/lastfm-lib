@@ -1,0 +1,42 @@
+apply plugin: "com.android.library"
+apply plugin: 'com.novoda.bintray-release'
+
+
+
+android {
+    compileSdkVersion 24
+    buildToolsVersion "24.0.0"
+
+    defaultConfig {
+        minSdkVersion 9
+        targetSdkVersion 24
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:24.0.0'
+
+}
+publish {
+    groupId = 'com.github.ag'
+    artifactId = 'lastfm-library'
+    publishVersion = '1.0.2'
+    desc = 'last.fm android library'
+    licences = ['Apache-2.0']
+    website = 'https://github.com/ArthurGhazaryan/lastfm-library'
+}
+
+
+
+
+
