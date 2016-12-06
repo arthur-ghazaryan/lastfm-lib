@@ -31,12 +31,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
  * Sending request using AsyncTask.
  */
+@SuppressWarnings("unused")
 public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void, Void> {
 
 
@@ -77,10 +80,14 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
 
     private LfmRequest.LfmRequestListener listener;
 
-    public boolean scrobbleMethod;
+    private boolean scrobbleMethod;
 
 
     private boolean restRequest;
+
+
+    private HttpURLConnection connection = null;
+    private BufferedReader reader = null;
 
     public JSONOperation(String method, LfmParameters params, boolean restRequest) {
         this.params = params;
@@ -113,193 +120,156 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
     @Override
     protected Void doInBackground(LfmRequest.LfmRequestListener... params) {
         this.listener = params[0];
-        if (restRequest) {
-            restRequest(params[0]);
-        } else if (scrobbleMethod) {
-            scrobble(params[0]);
-        } else
-            getJSON(params[0]);
+        try {
+            if (restRequest) {
+                send("restRequest");
+            } else if (scrobbleMethod) {
+                send("scrobble");
+            } else
+                send("getJsonResponse");
+        } catch (NoSuchMethodException | InvocationTargetException | JSONException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
         return null;
+    }
+
+
+    private void send(String methodName) throws JSONException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        try {
+            Method invokeMethod = this.getClass().getDeclaredMethod(methodName);
+            invokeMethod.setAccessible(true);
+            invokeMethod.invoke(this);
+        } catch (Exception e) {
+            if (e.getClass().getName().equals(IOException.class.getName()))
+                errorHandling(e.getMessage());
+            e.printStackTrace();
+        } finally {
+            closeConnection();
+        }
+    }
+
+    private void closeConnection() {
+        if (connection != null)
+            connection.disconnect();
+        try {
+            if (reader != null)
+                reader.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            error.httpClientError = true;
+            error.errorMessage = e.getMessage();
+        }
+    }
+
+    private void errorHandling(String msg) {
+        error.httpClientError = true;
+        error.errorMessage = msg;
+        response = null;
     }
 
     /**
      * Method for JSON request.
      */
-    private void getJSON(LfmRequest.LfmRequestListener listener) {
-        HttpURLConnection connection = null;
-        BufferedReader reader = null;
+    private void getJsonResponse() throws JSONException, IOException {
         StringBuffer buffer;
-        try {
-            URL url = new URL(requestURL);
-            connection = (HttpURLConnection) url.openConnection();
+        URL url = new URL(requestURL);
+        connection = (HttpURLConnection) url.openConnection();
 
-            if (connection.getResponseCode() == 200) {
-                InputStream in = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(in));
-                buffer = new StringBuffer();
+        if (connection.getResponseCode() == 200) {
+            InputStream in = connection.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(in));
+            buffer = new StringBuffer();
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-                try {
-                    response = new JSONObject(buffer.toString());
-                    if (!response.optString("error").equals("")) {
-                        error = new LfmError(response);
-                        response = null;
-                    } else {
-                        error = null;
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+            response = new JSONObject(buffer.toString());
+            if (!response.optString("error").equals("")) {
+                error = new LfmError(response);
                 response = null;
+            } else {
+                error = null;
             }
-        } catch (IOException e) {
-            error.httpClientError = true;
-            error.errorMessage = e.getMessage();
+        } else {
+            error.errorCode = connection.getResponseCode();
+            error.errorMessage = connection.getResponseMessage();
             response = null;
-            e.printStackTrace();
-        } finally {
-            if (connection != null)
-                connection.disconnect();
-            try {
-                if (reader != null)
-                    reader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                error.httpClientError = true;
-                error.errorMessage = e.getMessage();
+        }
+    }
+
+
+    private void scrobble() throws JSONException, IOException {
+        StringBuffer buffer;
+        URL url = new URL(ROOT_URL);
+        connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+        wr.writeBytes(scrobbleParameters.parseParameters());
+        wr.flush();
+        wr.close();
+        if (connection.getResponseCode() == 200) {
+            InputStream in = connection.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(in));
+            buffer = new StringBuffer();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+            response = new JSONObject(buffer.toString());
+            if (!response.optString("error").equals("")) {
+                error = new LfmError(response);
+                response = null;
+            } else if (response.optJSONObject("ignoredMessage") != null) {
+                error.errorCode = Integer.valueOf(response.optJSONObject("ignoredMessage").optString("code"));
+                error.errorMessage = response.optJSONObject("ignoredMessage").optString("#text");
+            } else {
+                error = null;
             }
 
+        } else {
+            error.errorCode = connection.getResponseCode();
+            error.errorMessage = connection.getResponseMessage();
+            response = null;
         }
 
     }
 
-
-    private void scrobble(LfmRequest.LfmRequestListener listener) {
-        HttpURLConnection connection = null;
-        BufferedReader reader = null;
+    private void restRequest() throws JSONException, IOException {
         StringBuffer buffer;
-        try {
-            URL url = new URL(ROOT_URL);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-            wr.writeBytes(scrobbleParameters.parseParameters());
-            wr.flush();
-            wr.close();
-            if (connection.getResponseCode() == 200) {
-                InputStream in = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(in));
-                buffer = new StringBuffer();
 
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-                try {
-                    response = new JSONObject(buffer.toString());
-                    if (!response.optString("error").equals("")) {
-                        error = new LfmError(response);
-                        response = null;
-                    } else if (response.optJSONObject("ignoredMessage") != null) {
-                        error.errorCode = Integer.valueOf(response.optJSONObject("ignoredMessage").optString("code"));
-                        error.errorMessage = response.optJSONObject("ignoredMessage").optString("#text");
-                    } else {
-                        error = null;
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
+        URL url = new URL(ROOT_URL);
+        connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setDoOutput(true);
+        DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+        wr.writeBytes(LfmUtil.parseRestRequestParams(method, params));
+        wr.flush();
+        wr.close();
+        if (connection.getResponseCode() == 200) {
+            InputStream in = connection.getInputStream();
+            reader = new BufferedReader(new InputStreamReader(in));
+            buffer = new StringBuffer();
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                buffer.append(line);
+            }
+            response = new JSONObject(buffer.toString());
+            if (!response.optString("error").equals("")) {
+                error = new LfmError(response);
                 response = null;
-            }
-        } catch (IOException e) {
-            error.httpClientError = true;
-            error.errorMessage = e.getMessage();
-            response = null;
-            e.printStackTrace();
-        } finally {
-            if (connection != null)
-                connection.disconnect();
-            try {
-                if (reader != null)
-                    reader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                error.httpClientError = true;
-                error.errorMessage = e.getMessage();
-            }
-
-        }
-
-    }
-
-    private void restRequest(LfmRequest.LfmRequestListener listener) {
-        HttpURLConnection connection = null;
-        BufferedReader reader = null;
-        StringBuffer buffer;
-        try {
-            URL url = new URL(ROOT_URL);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("POST");
-            connection.setDoOutput(true);
-            DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-            wr.writeBytes(LfmUtil.parseRestRequestParams(method, params));
-            wr.flush();
-            wr.close();
-            if (connection.getResponseCode() == 200) {
-                InputStream in = connection.getInputStream();
-                reader = new BufferedReader(new InputStreamReader(in));
-                buffer = new StringBuffer();
-
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    buffer.append(line);
-                }
-                try {
-                    response = new JSONObject(buffer.toString());
-                    if (!response.optString("error").equals("")) {
-                        error = new LfmError(response);
-                        response = null;
-                    } else {
-                        error = null;
-                    }
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
             } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
-                response = null;
+                error = null;
             }
-        } catch (IOException e) {
-            error.httpClientError = true;
-            error.errorMessage = e.getMessage();
+        } else {
+            error.errorCode = connection.getResponseCode();
+            error.errorMessage = connection.getResponseMessage();
             response = null;
-            e.printStackTrace();
-        } finally {
-            if (connection != null)
-                connection.disconnect();
-            try {
-                if (reader != null)
-                    reader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                error.httpClientError = true;
-                error.errorMessage = e.getMessage();
-            }
-
         }
-
     }
-
 }
+
 
