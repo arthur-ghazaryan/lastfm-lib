@@ -168,6 +168,25 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
         response = null;
     }
 
+    private void parseBadRequestResponse() throws JSONException, IOException {
+        reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+        StringBuffer buffer = new StringBuffer();
+
+        String line;
+        while ((line = reader.readLine()) != null) {
+            buffer.append(line);
+        }
+
+        if (!buffer.toString().isEmpty()) {
+            JSONObject errorObject = new JSONObject(buffer.toString());
+            error = new LfmError(errorObject);
+        } else {
+            error.errorCode = connection.getResponseCode();
+            error.errorMessage = connection.getResponseMessage();
+            response = null;
+        }
+    }
+
     /**
      * Method for JSON request.
      */
@@ -193,22 +212,7 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
                 error = null;
             }
         } else {
-            reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            buffer = new StringBuffer();
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-
-            if (!buffer.toString().isEmpty()) {
-                JSONObject errorObject = new JSONObject(buffer.toString());
-                error = new LfmError(errorObject);
-            } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
-                response = null;
-            }
+            parseBadRequestResponse();
         }
     }
 
@@ -244,22 +248,7 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
             }
 
         } else {
-            reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            buffer = new StringBuffer();
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-
-            if (!buffer.toString().isEmpty()) {
-                JSONObject errorObject = new JSONObject(buffer.toString());
-                error = new LfmError(errorObject);
-            } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
-                response = null;
-            }
+            parseBadRequestResponse();
         }
 
     }
@@ -292,22 +281,7 @@ public class JSONOperation extends AsyncTask<LfmRequest.LfmRequestListener, Void
                 error = null;
             }
         } else {
-            reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-            buffer = new StringBuffer();
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-
-            if (!buffer.toString().isEmpty()) {
-                JSONObject errorObject = new JSONObject(buffer.toString());
-                error = new LfmError(errorObject);
-            } else {
-                error.errorCode = connection.getResponseCode();
-                error.errorMessage = connection.getResponseMessage();
-                response = null;
-            }
+            parseBadRequestResponse();
         }
     }
 }
