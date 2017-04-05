@@ -17,6 +17,8 @@ package com.ag.lfm;
 
 import com.ag.lfm.util.LfmUtil;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,7 +86,17 @@ public class ScrobbleParameters extends LinkedList<LfmParameters> implements Com
                 .append("method=track.scrobble");
         for (int i = 0; i < this.size(); i++) {
             for (String p : this.get(i).keySet()) {
-                builder.append("&").append(p).append("[").append(i).append("]").append("=").append(this.get(i).get(p));
+                try {
+                    builder.append("&")
+                            .append(p)
+                            .append("[")
+                            .append(i)
+                            .append("]")
+                            .append("=")
+                            .append(URLEncoder.encode(this.get(i).get(p), "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
             }
         }
         builder.append("&").append("api_key").append("=").append(Lfm.getApiKey()).append("&").append("sk=")
